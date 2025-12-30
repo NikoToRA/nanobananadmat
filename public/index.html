@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI画像生成 - 講習用ツール</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 AI画像生成ツール</h1>
+            <p class="subtitle">テキストや画像から新しい画像を生成してみましょう</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('text', this)">テキストから生成</button>
+            <button class="tab-button" onclick="switchTab('image', this)">画像から生成</button>
+        </div>
+
+        <!-- テキストから画像生成 -->
+        <div id="text-tab" class="tab-content active">
+            <div class="input-section">
+                <label for="prompt">画像の説明を入力してください</label>
+                <textarea 
+                    id="prompt" 
+                    placeholder="例: バナナが乗っているカラフルなケーキ"
+                    rows="4"
+                ></textarea>
+                <button id="generate-btn" class="generate-button" onclick="generateFromText()">
+                    🎨 画像を生成
+                </button>
+            </div>
+        </div>
+
+        <!-- 画像から画像生成 -->
+        <div id="image-tab" class="tab-content">
+            <div class="input-section">
+                <label for="image-prompt">画像の説明を入力してください</label>
+                <textarea 
+                    id="image-prompt" 
+                    placeholder="例: この画像をより明るく、カラフルに"
+                    rows="4"
+                ></textarea>
+                
+                <label for="image-upload" class="upload-label">
+                    📷 画像をアップロード
+                    <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)">
+                </label>
+                
+                <div id="preview-section" class="preview-section" style="display: none;">
+                    <p>アップロードした画像:</p>
+                    <img id="preview-image" src="" alt="プレビュー">
+                </div>
+
+                <button id="generate-image-btn" class="generate-button" onclick="generateFromImage()" disabled>
+                    🎨 画像を生成
+                </button>
+            </div>
+        </div>
+
+        <!-- 結果表示エリア -->
+        <div id="result-section" class="result-section" style="display: none;">
+            <h2>生成された画像</h2>
+            <div class="result-container">
+                <img id="result-image" src="" alt="生成された画像">
+                <button class="download-button" onclick="downloadImage()">
+                    💾 画像をダウンロード
+                </button>
+            </div>
+        </div>
+
+        <!-- ローディング -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>画像を生成しています... しばらくお待ちください</p>
+        </div>
+
+        <!-- エラー表示 -->
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
