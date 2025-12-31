@@ -10,7 +10,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
             background-attachment: fixed;
             min-height: 100vh;
             color: #1e293b;
@@ -36,7 +36,7 @@
         </header>
 
         <div class="main-content">
-            <!-- 入力セクション -->
+            <!-- 左側：入力セクション -->
             <div class="input-panel">
                 <div class="panel-card">
                     <h2 class="section-title">✨ 画像を生成</h2>
@@ -103,25 +103,33 @@
                 </div>
             </div>
 
-            <!-- 結果表示セクション -->
-            <div id="result-panel" class="result-panel" style="display: none;">
+            <!-- 右側：結果表示セクション -->
+            <div id="result-panel" class="result-panel">
                 <div class="panel-card result-card">
                     <h2 class="section-title result-title">
                         <span class="title-icon">🎉</span>
                         生成された画像
                     </h2>
-                    <div class="result-image-wrapper">
-                        <img id="result-image" src="" alt="生成された画像" class="result-image">
+                    <div id="result-placeholder" class="result-placeholder">
+                        <div class="placeholder-content">
+                            <div class="placeholder-icon">🖼️</div>
+                            <p class="placeholder-text">生成された画像がここに表示されます</p>
+                        </div>
                     </div>
-                    <div class="result-actions">
-                        <button class="download-button" onclick="downloadImage()">
-                            <span class="button-icon">💾</span>
-                            画像をダウンロード
-                        </button>
-                        <button class="generate-again-button" onclick="scrollToTop()">
-                            <span class="button-icon">🔄</span>
-                            もう一度生成
-                        </button>
+                    <div id="result-content" class="result-content" style="display: none;">
+                        <div class="result-image-wrapper">
+                            <img id="result-image" src="" alt="生成された画像" class="result-image">
+                        </div>
+                        <div class="result-actions">
+                            <button class="download-button" onclick="downloadImage()">
+                                <span class="button-icon">💾</span>
+                                画像をダウンロード
+                            </button>
+                            <button class="generate-again-button" onclick="scrollToTop()">
+                                <span class="button-icon">🔄</span>
+                                もう一度生成
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

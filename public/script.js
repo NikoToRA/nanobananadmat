@@ -99,7 +99,8 @@ async function generateImage() {
         const data = await response.json();
         
         if (!response.ok) {
-            throw new Error(data.error || '生成に失敗しました');
+            const errorMsg = data.error || data.details || '生成に失敗しました';
+            throw new Error(errorMsg);
         }
         
         if (data.success && data.image) {
@@ -109,7 +110,16 @@ async function generateImage() {
         }
     } catch (error) {
         console.error('エラー:', error);
-        showError(error.message || '画像生成中にエラーが発生しました');
+        let errorMessage = error.message || '画像生成中にエラーが発生しました';
+        
+        // エラーメッセージをより分かりやすく
+        if (errorMessage.includes('APIキー')) {
+            errorMessage = 'APIキーが設定されていません。Vercelの環境変数を確認してください。';
+        } else if (errorMessage.includes('画像生成に失敗')) {
+            errorMessage = '画像生成に失敗しました。APIキーが正しく設定されているか、使用しているAPIが画像生成をサポートしているか確認してください。';
+        }
+        
+        showError(errorMessage);
     } finally {
         hideLoading();
     }
@@ -117,14 +127,21 @@ async function generateImage() {
 
 // 結果表示
 function showResult(imageBase64, mimeType) {
-    const resultPanel = document.getElementById('result-panel');
+    const resultPlaceholder = document.getElementById('result-placeholder');
+    const resultContent = document.getElementById('result-content');
     const resultImage = document.getElementById('result-image');
+    
+    // プレースホルダーを隠して、結果を表示
+    resultPlaceholder.style.display = 'none';
+    resultContent.style.display = 'block';
     
     // base64データを画像として表示
     resultImage.src = `data:${mimeType};base64,${imageBase64}`;
     resultImage.onload = function() {
-        resultPanel.style.display = 'block';
-        resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // スクロールして結果を表示（モバイルの場合）
+        if (window.innerWidth < 1024) {
+            resultContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     };
 }
 
@@ -180,6 +197,11 @@ function hideError() {
 
 // 結果リセット
 function resetResult() {
-    document.getElementById('result-panel').style.display = 'none';
-    document.getElementById('result-image').src = '';
+    const resultPlaceholder = document.getElementById('result-placeholder');
+    const resultContent = document.getElementById('result-content');
+    const resultImage = document.getElementById('result-image');
+    
+    resultPlaceholder.style.display = 'flex';
+    resultContent.style.display = 'none';
+    resultImage.src = '';
 }
