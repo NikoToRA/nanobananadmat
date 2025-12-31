@@ -100,11 +100,17 @@ app.post('/api/generate', async (req, res) => {
       mimeType: imageData.mimeType
     });
   } catch (error) {
-    console.error('❌ 生成エラー詳細:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
+    // エラーの詳細を全てログ出力
+    console.error('❌ 生成エラー詳細:');
+    console.error('Message:', error.message);
+    console.error('Error Type:', error.name);
+    if (error.stack) {
+      console.error('Stack:', error.stack.substring(0, 500)); // 最初の500文字
+    }
+    if (error.cause) {
+      console.error('Cause:', error.cause);
+    }
+    
     res.status(500).json({ 
       error: '画像生成中にエラーが発生しました',
       details: error.message,
@@ -190,11 +196,17 @@ app.post('/api/generate-from-image', upload.single('image'), async (req, res) =>
       mimeType: imageData.mimeType
     });
   } catch (error) {
-    console.error('❌ 生成エラー詳細:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
+    // エラーの詳細を全てログ出力
+    console.error('❌ 生成エラー詳細:');
+    console.error('Message:', error.message);
+    console.error('Error Type:', error.name);
+    if (error.stack) {
+      console.error('Stack:', error.stack.substring(0, 500)); // 最初の500文字
+    }
+    if (error.cause) {
+      console.error('Cause:', error.cause);
+    }
+    
     res.status(500).json({ 
       error: '画像生成中にエラーが発生しました',
       details: error.message,
