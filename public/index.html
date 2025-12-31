@@ -3,84 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI画像生成 - 講習用ツール</title>
+    <title>AI画像生成ツール - NanobananaDMAT</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🎨 AI画像生成ツール</h1>
-            <p class="subtitle">テキストや画像から新しい画像を生成してみましょう</p>
+    <div class="app-container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🎨 AI画像生成ツール</h1>
+                <p class="header-subtitle">テキストと画像から新しい画像を自由に生成</p>
+            </div>
         </header>
 
-        <div class="tabs">
-            <button class="tab-button active" onclick="switchTab('text', this)">テキストから生成</button>
-            <button class="tab-button" onclick="switchTab('image', this)">画像から生成</button>
-        </div>
+        <div class="main-content">
+            <!-- 入力セクション -->
+            <div class="input-panel">
+                <div class="panel-card">
+                    <h2 class="section-title">✨ 画像を生成</h2>
+                    
+                    <!-- テキスト入力 -->
+                    <div class="input-group">
+                        <label for="prompt-input" class="input-label">
+                            <span class="label-icon">📝</span>
+                            画像の説明（テキスト）
+                        </label>
+                        <textarea 
+                            id="prompt-input" 
+                            class="prompt-textarea"
+                            placeholder="例: バナナが乗っているカラフルなケーキ、夕日の下で走る猫、未来の都市風景など..."
+                            rows="5"
+                        ></textarea>
+                        <div class="input-hint">テキストだけでも、画像と組み合わせてもOKです</div>
+                    </div>
 
-        <!-- テキストから画像生成 -->
-        <div id="text-tab" class="tab-content active">
-            <div class="input-section">
-                <label for="prompt">画像の説明を入力してください</label>
-                <textarea 
-                    id="prompt" 
-                    placeholder="例: バナナが乗っているカラフルなケーキ"
-                    rows="4"
-                ></textarea>
-                <button id="generate-btn" class="generate-button" onclick="generateFromText()">
-                    🎨 画像を生成
-                </button>
-            </div>
-        </div>
+                    <!-- 画像アップロード -->
+                    <div class="input-group">
+                        <label class="input-label">
+                            <span class="label-icon">🖼️</span>
+                            元になる画像（オプション）
+                        </label>
+                        
+                        <!-- ドラッグ&ドロップエリア -->
+                        <div 
+                            id="drop-zone" 
+                            class="drop-zone"
+                            ondrop="handleDrop(event)"
+                            ondragover="handleDragOver(event)"
+                            ondragleave="handleDragLeave(event)"
+                        >
+                            <div class="drop-zone-content">
+                                <div class="drop-icon">📎</div>
+                                <p class="drop-text">画像をドラッグ&ドロップ</p>
+                                <p class="drop-subtext">またはクリックしてファイルを選択</p>
+                                <input 
+                                    type="file" 
+                                    id="file-input" 
+                                    accept="image/*" 
+                                    class="file-input"
+                                    onchange="handleFileSelect(event)"
+                                >
+                            </div>
+                        </div>
 
-        <!-- 画像から画像生成 -->
-        <div id="image-tab" class="tab-content">
-            <div class="input-section">
-                <label for="image-prompt">画像の説明を入力してください</label>
-                <textarea 
-                    id="image-prompt" 
-                    placeholder="例: この画像をより明るく、カラフルに"
-                    rows="4"
-                ></textarea>
-                
-                <label for="image-upload" class="upload-label">
-                    📷 画像をアップロード
-                    <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)">
-                </label>
-                
-                <div id="preview-section" class="preview-section" style="display: none;">
-                    <p>アップロードした画像:</p>
-                    <img id="preview-image" src="" alt="プレビュー">
+                        <!-- プレビュー -->
+                        <div id="image-preview" class="image-preview" style="display: none;">
+                            <div class="preview-header">
+                                <span class="preview-label">プレビュー</span>
+                                <button class="remove-button" onclick="removeImage()">✕</button>
+                            </div>
+                            <img id="preview-image" src="" alt="プレビュー" class="preview-img">
+                        </div>
+                    </div>
+
+                    <!-- 生成ボタン -->
+                    <button id="generate-button" class="generate-button" onclick="generateImage()">
+                        <span class="button-icon">✨</span>
+                        <span class="button-text">画像を生成</span>
+                    </button>
                 </div>
+            </div>
 
-                <button id="generate-image-btn" class="generate-button" onclick="generateFromImage()" disabled>
-                    🎨 画像を生成
-                </button>
+            <!-- 結果表示セクション -->
+            <div id="result-panel" class="result-panel" style="display: none;">
+                <div class="panel-card result-card">
+                    <h2 class="section-title result-title">
+                        <span class="title-icon">🎉</span>
+                        生成された画像
+                    </h2>
+                    <div class="result-image-wrapper">
+                        <img id="result-image" src="" alt="生成された画像" class="result-image">
+                    </div>
+                    <div class="result-actions">
+                        <button class="download-button" onclick="downloadImage()">
+                            <span class="button-icon">💾</span>
+                            画像をダウンロード
+                        </button>
+                        <button class="generate-again-button" onclick="scrollToTop()">
+                            <span class="button-icon">🔄</span>
+                            もう一度生成
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- 結果表示エリア -->
-        <div id="result-section" class="result-section" style="display: none;">
-            <h2>生成された画像</h2>
-            <div class="result-container">
-                <img id="result-image" src="" alt="生成された画像">
-                <button class="download-button" onclick="downloadImage()">
-                    💾 画像をダウンロード
-                </button>
+        <!-- ローディングオーバーレイ -->
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">
+            <div class="loading-content">
+                <div class="spinner-large"></div>
+                <h3 class="loading-title">画像を生成中...</h3>
+                <p class="loading-subtitle">少しお待ちください</p>
             </div>
-        </div>
-
-        <!-- ローディング -->
-        <div id="loading" class="loading" style="display: none;">
-            <div class="spinner"></div>
-            <p>画像を生成しています... しばらくお待ちください</p>
         </div>
 
         <!-- エラー表示 -->
-        <div id="error" class="error" style="display: none;"></div>
+        <div id="error-toast" class="error-toast" style="display: none;">
+            <span class="error-icon">⚠️</span>
+            <span id="error-message" class="error-text"></span>
+            <button class="error-close" onclick="hideError()">✕</button>
+        </div>
     </div>
 
     <script src="script.js"></script>
 </body>
 </html>
-

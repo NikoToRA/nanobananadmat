@@ -1,102 +1,70 @@
-let currentTab = 'text';
 let uploadedImageFile = null;
 
-// タブ切り替え
-function switchTab(tab, element) {
-    currentTab = tab;
-    
-    // タブボタンの状態を更新
-    document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    if (element) {
-        element.classList.add('active');
-    }
-    
-    // タブコンテンツの表示を切り替え
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    if (tab === 'text') {
-        document.getElementById('text-tab').classList.add('active');
-    } else {
-        document.getElementById('image-tab').classList.add('active');
-    }
-    
-    // 結果をリセット
-    resetResult();
+// ドラッグ&ドロップ処理
+function handleDragOver(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('drop-zone').classList.add('drag-over');
 }
 
-// 画像アップロード処理
-function handleImageUpload(event) {
+function handleDragLeave(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('drop-zone').classList.remove('drag-over');
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('drop-zone').classList.remove('drag-over');
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        handleFile(files[0]);
+    }
+}
+
+// ファイル選択処理
+function handleFileSelect(event) {
     const file = event.target.files[0];
-    if (!file) return;
+    if (file) {
+        handleFile(file);
+    }
+}
+
+// ファイル処理（共通）
+function handleFile(file) {
+    if (!file.type.startsWith('image/')) {
+        showError('画像ファイルを選択してください');
+        return;
+    }
     
     uploadedImageFile = file;
     
     // プレビュー表示
     const reader = new FileReader();
     reader.onload = function(e) {
-        document.getElementById('preview-image').src = e.target.result;
-        document.getElementById('preview-section').style.display = 'block';
-        document.getElementById('generate-image-btn').disabled = false;
+        const preview = document.getElementById('image-preview');
+        const previewImg = document.getElementById('preview-image');
+        previewImg.src = e.target.result;
+        preview.style.display = 'block';
     };
     reader.readAsDataURL(file);
 }
 
-// テキストから画像生成
-async function generateFromText() {
-    const prompt = document.getElementById('prompt').value.trim();
-    
-    if (!prompt) {
-        showError('プロンプトを入力してください');
-        return;
-    }
-    
-    showLoading();
-    hideError();
-    resetResult();
-    
-    try {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ prompt })
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || '生成に失敗しました');
-        }
-        
-        if (data.success && data.image) {
-            showResult(data.image, data.mimeType || 'image/png');
-        } else {
-            throw new Error('画像データが取得できませんでした');
-        }
-    } catch (error) {
-        console.error('エラー:', error);
-        showError(error.message || '画像生成中にエラーが発生しました');
-    } finally {
-        hideLoading();
-    }
+// 画像を削除
+function removeImage() {
+    uploadedImageFile = null;
+    document.getElementById('image-preview').style.display = 'none';
+    document.getElementById('file-input').value = '';
 }
 
-// 画像から画像生成
-async function generateFromImage() {
-    const prompt = document.getElementById('image-prompt').value.trim();
+// 画像生成（統合）
+async function generateImage() {
+    const prompt = document.getElementById('prompt-input').value.trim();
     
-    if (!prompt) {
-        showError('プロンプトを入力してください');
-        return;
-    }
-    
-    if (!uploadedImageFile) {
-        showError('画像をアップロードしてください');
+    if (!prompt && !uploadedImageFile) {
+        showError('テキストまたは画像のいずれかを入力してください');
         return;
     }
     
@@ -105,14 +73,28 @@ async function generateFromImage() {
     resetResult();
     
     try {
-        const formData = new FormData();
-        formData.append('image', uploadedImageFile);
-        formData.append('prompt', prompt);
+        let response;
         
-        const response = await fetch('/api/generate-from-image', {
-            method: 'POST',
-            body: formData
-        });
+        if (uploadedImageFile) {
+            // 画像あり（画像 + テキスト）
+            const formData = new FormData();
+            formData.append('image', uploadedImageFile);
+            formData.append('prompt', prompt || 'この画像を基に新しい画像を生成してください');
+            
+            response = await fetch('/api/generate-from-image', {
+                method: 'POST',
+                body: formData
+            });
+        } else {
+            // テキストのみ
+            response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt })
+            });
+        }
         
         const data = await response.json();
         
@@ -135,14 +117,14 @@ async function generateFromImage() {
 
 // 結果表示
 function showResult(imageBase64, mimeType) {
-    const resultSection = document.getElementById('result-section');
+    const resultPanel = document.getElementById('result-panel');
     const resultImage = document.getElementById('result-image');
     
     // base64データを画像として表示
     resultImage.src = `data:${mimeType};base64,${imageBase64}`;
     resultImage.onload = function() {
-        resultSection.style.display = 'block';
-        resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        resultPanel.style.display = 'block';
+        resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 }
 
@@ -165,29 +147,39 @@ function downloadImage() {
     document.body.removeChild(link);
 }
 
+// トップにスクロール
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // ローディング表示
 function showLoading() {
-    document.getElementById('loading').style.display = 'block';
+    document.getElementById('loading-overlay').style.display = 'flex';
 }
 
 function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
+    document.getElementById('loading-overlay').style.display = 'none';
 }
 
 // エラー表示
 function showError(message) {
-    const errorDiv = document.getElementById('error');
-    errorDiv.textContent = `❌ ${message}`;
-    errorDiv.style.display = 'block';
+    const errorToast = document.getElementById('error-toast');
+    const errorMessage = document.getElementById('error-message');
+    errorMessage.textContent = message;
+    errorToast.style.display = 'flex';
+    
+    // 5秒後に自動で閉じる
+    setTimeout(() => {
+        hideError();
+    }, 5000);
 }
 
 function hideError() {
-    document.getElementById('error').style.display = 'none';
+    document.getElementById('error-toast').style.display = 'none';
 }
 
 // 結果リセット
 function resetResult() {
-    document.getElementById('result-section').style.display = 'none';
+    document.getElementById('result-panel').style.display = 'none';
     document.getElementById('result-image').src = '';
 }
-
