@@ -185,12 +185,13 @@ app.post('/api/generate', async (req, res) => {
 });
 
 // 画像から画像生成（画像 + プロンプト）
+// Imagen APIを使用して画像を参照した生成を行います
 app.post('/api/generate-from-image', upload.single('image'), async (req, res) => {
   try {
     console.log('📝 画像+テキスト生成リクエスト受信');
     
-    if (!genAI) {
-      console.error('❌ Gemini API初期化エラー');
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('❌ APIキーが設定されていません');
       return res.status(500).json({ error: 'APIキーが設定されていません。Vercelの環境変数にGEMINI_API_KEYを設定してください。' });
     }
 
@@ -214,65 +215,73 @@ app.post('/api/generate-from-image', upload.single('image'), async (req, res) =>
 
     // 画像をbase64に変換
     const imageBase64 = imageFile.buffer.toString('base64');
-    const mimeType = imageFile.mimetype;
 
-    console.log('🤖 Gemini API呼び出し開始（画像+テキスト）...');
-    const modelName = GEMINI_MODEL;
-    console.log('📋 使用モデル:', modelName);
+    console.log('🤖 Google Imagen API呼び出し開始（画像+テキスト）...');
     
-    const model = genAI.getGenerativeModel({ model: modelName });
+    const apiKey = process.env.GEMINI_API_KEY;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImages?key=${apiKey}`;
     
-    const result = await model.generateContent({
-      contents: [{
-        role: 'user',
-        parts: [
-          {
-            inlineData: {
-              data: imageBase64,
-              mimeType: mimeType
-            }
-          },
-          {
-            text: `この画像を基に、以下のプロンプトに従って新しい画像を生成してください: ${prompt}`
-          }
-        ]
-      }]
+    // 画像を参照したプロンプトで生成
+    const enhancedPrompt = `${prompt}, inspired by the style and composition of the reference image`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: enhancedPrompt,
+        reference_image: {
+          image_bytes: imageBase64,
+          mime_type: imageFile.mimetype
+        },
+        number_of_images: 1,
+        aspect_ratio: '1:1'
+      })
     });
 
-    console.log('✅ Gemini APIレスポンス受信');
-    const response = await result.response;
-    console.log('📄 レスポンス構造:', {
-      hasCandidates: !!response.candidates,
-      candidatesLength: response.candidates?.length
-    });
-    
-    const imageData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-
-    if (!imageData) {
-      const errorText = response.candidates?.[0]?.content?.parts?.[0]?.text || '画像データが返されませんでした';
-      console.error('❌ 画像データが見つかりません:', errorText);
-      return res.status(500).json({ 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Imagen APIエラー:', response.status, errorText);
+      return res.status(response.status).json({ 
         error: '画像生成に失敗しました',
         details: errorText
+      });
+    }
+
+    const data = await response.json();
+    console.log('✅ Imagen APIレスポンス受信');
+    
+    let resultBase64 = null;
+    if (data.generatedImages && data.generatedImages[0]) {
+      if (data.generatedImages[0].imageBase64) {
+        resultBase64 = data.generatedImages[0].imageBase64;
+      } else if (data.generatedImages[0].imageUrl) {
+        const imageResponse = await fetch(data.generatedImages[0].imageUrl);
+        const imageBuffer = await imageResponse.arrayBuffer();
+        resultBase64 = Buffer.from(imageBuffer).toString('base64');
+      }
+    }
+    
+    if (!resultBase64) {
+      console.error('❌ 画像データが見つかりません');
+      return res.status(500).json({ 
+        error: '画像データが取得できませんでした'
       });
     }
 
     console.log('✅ 画像データ取得成功');
     res.json({
       success: true,
-      image: imageData.data,
-      mimeType: imageData.mimeType
+      image: resultBase64,
+      mimeType: 'image/png'
     });
   } catch (error) {
-    // エラーの詳細を全てログ出力
     console.error('❌ 生成エラー詳細:');
     console.error('Message:', error.message);
     console.error('Error Type:', error.name);
     if (error.stack) {
-      console.error('Stack:', error.stack.substring(0, 500)); // 最初の500文字
-    }
-    if (error.cause) {
-      console.error('Cause:', error.cause);
+      console.error('Stack:', error.stack.substring(0, 500));
     }
     
     res.status(500).json({ 
