@@ -1,5 +1,21 @@
 let uploadedImageFile = null;
 
+// DOMイベントを確実にバインド（inputを上に被せない方式）
+document.addEventListener('DOMContentLoaded', () => {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    if (!dropZone || !fileInput) return;
+
+    // クリックでファイル選択
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileSelect);
+
+    // ドラッグ&ドロップ
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+    dropZone.addEventListener('drop', handleDrop);
+});
+
 // ドラッグ&ドロップ処理
 function handleDragOver(event) {
     event.preventDefault();
