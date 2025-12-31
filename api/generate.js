@@ -1,5 +1,4 @@
 require('dotenv').config();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 module.exports = async (req, res) => {
   // CORS設定
@@ -31,53 +30,38 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'プロンプトが入力されていません' });
     }
 
-    console.log('🤖 Google Imagen API呼び出し開始...');
-    
-    // Google Imagen API (imagen-3.0-generate-001) を使用
+    // ✅ Geminiの画像生成モデルを v1beta:generateContent で呼ぶ
+    // ListModelsで確認できた image系モデル例:
+    // - models/gemini-2.5-flash-image
+    // - models/gemini-2.5-flash-image-preview
+    // - models/gemini-3-pro-image-preview
     const apiKey = process.env.GEMINI_API_KEY;
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImages?key=${apiKey}`;
-    
-    console.log('📋 使用API: Imagen 3.0 (imagen-3.0-generate-001)');
-    
+    const modelName = process.env.GEMINI_IMAGE_MODEL || 'models/gemini-2.5-flash-image';
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
+
+    console.log('🤖 Gemini画像生成(v1beta generateContent) 呼び出し開始...');
+    console.log('📋 使用モデル:', modelName);
+
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: prompt,
-        number_of_images: 1,
-        aspect_ratio: '1:1'
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `次の指示で画像を1枚生成してください。画像のみ返してください。\n\n${prompt}`
+              }
+            ]
+          }
+        ]
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Imagen APIエラー:', response.status, errorText);
-      
-      // モデル名が違う場合は他のモデル名を試す
-      if (response.status === 404) {
-        console.log('⚠️ imagen-3.0-generate-001が見つかりません。利用可能なモデルを確認します...');
-        // 利用可能なモデル一覧を取得
-        const modelsUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-        try {
-          const modelsResponse = await fetch(modelsUrl);
-          if (modelsResponse.ok) {
-            const modelsData = await modelsResponse.json();
-            console.log('📋 利用可能なモデル:');
-            if (modelsData.models) {
-              modelsData.models.forEach(model => {
-                if (model.name && (model.name.includes('imagen') || model.name.includes('image'))) {
-                  console.log(`  - ${model.name}`);
-                }
-              });
-            }
-          }
-        } catch (e) {
-          console.error('モデル一覧取得エラー:', e.message);
-        }
-      }
-      
+      console.error('❌ Gemini画像生成APIエラー:', response.status, errorText);
       return res.status(response.status).json({ 
         error: '画像生成に失敗しました',
         details: errorText,
@@ -86,36 +70,19 @@ module.exports = async (req, res) => {
     }
 
     const data = await response.json();
-    console.log('✅ Imagen APIレスポンス受信');
-    console.log('📄 レスポンス構造:', Object.keys(data));
-    
-    // Imagen APIのレスポンス形式に応じて画像データを取得
-    let imageBase64 = null;
-    let mimeType = 'image/png';
-    
-    if (data.generatedImages && data.generatedImages[0]) {
-      // base64画像データがある場合
-      if (data.generatedImages[0].imageBase64) {
-        imageBase64 = data.generatedImages[0].imageBase64;
-      } else if (data.generatedImages[0].imageUrl) {
-        // URLの場合、画像を取得してbase64に変換
-        const imageResponse = await fetch(data.generatedImages[0].imageUrl);
-        const imageBuffer = await imageResponse.arrayBuffer();
-        imageBase64 = Buffer.from(imageBuffer).toString('base64');
-      }
-    } else if (data.images && data.images[0]) {
-      // 別のレスポンス形式
-      if (data.images[0].base64) {
-        imageBase64 = data.images[0].base64;
-      }
-    }
+    console.log('✅ Gemini画像生成レスポンス受信');
+
+    // 画像inlineDataを探索
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find(p => p.inlineData && p.inlineData.data);
+    const imageBase64 = imagePart?.inlineData?.data || null;
+    const mimeType = imagePart?.inlineData?.mimeType || 'image/png';
     
     if (!imageBase64) {
-      console.error('❌ 画像データが見つかりません。レスポンス:', JSON.stringify(data).substring(0, 500));
+      console.error('❌ 画像データ(inlineData)が見つかりません。レスポンス:', JSON.stringify(data).substring(0, 800));
       return res.status(500).json({ 
         error: '画像データが取得できませんでした',
-        details: 'Imagen APIからのレスポンス形式が想定と異なります',
-        responseStructure: Object.keys(data)
+        details: 'Gemini画像生成モデルが画像を返しませんでした（テキストのみの可能性）'
       });
     }
 

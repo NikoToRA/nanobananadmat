@@ -67,13 +67,12 @@ module.exports = async (req, res) => {
     // 画像をbase64に変換
     const imageBase64 = imageFile.buffer.toString('base64');
 
-    console.log('🤖 Google Imagen API呼び出し開始（画像+テキスト）...');
-    
     const apiKey = process.env.GEMINI_API_KEY;
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImages?key=${apiKey}`;
-    
-    // 画像を参照したプロンプトで生成
-    const enhancedPrompt = `${prompt}, inspired by the style and composition of the reference image`;
+    const modelName = process.env.GEMINI_IMAGE_MODEL || 'models/gemini-2.5-flash-image';
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
+
+    console.log('🤖 Gemini画像生成(v1beta generateContent) 呼び出し開始（画像+テキスト）...');
+    console.log('📋 使用モデル:', modelName);
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -81,19 +80,28 @@ module.exports = async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt: enhancedPrompt,
-        reference_image: {
-          image_bytes: imageBase64,
-          mime_type: imageFile.mimetype
-        },
-        number_of_images: 1,
-        aspect_ratio: '1:1'
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  data: imageBase64,
+                  mimeType: imageFile.mimetype
+                }
+              },
+              {
+                text: `この画像を参考に、次の指示で画像を1枚生成してください。画像のみ返してください。\n\n${prompt}`
+              }
+            ]
+          }
+        ]
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Imagen APIエラー:', response.status, errorText);
+      console.error('❌ Gemini画像生成APIエラー:', response.status, errorText);
       return res.status(response.status).json({ 
         error: '画像生成に失敗しました',
         details: errorText
@@ -101,21 +109,15 @@ module.exports = async (req, res) => {
     }
 
     const data = await response.json();
-    console.log('✅ Imagen APIレスポンス受信');
-    
-    let resultBase64 = null;
-    if (data.generatedImages && data.generatedImages[0]) {
-      if (data.generatedImages[0].imageBase64) {
-        resultBase64 = data.generatedImages[0].imageBase64;
-      } else if (data.generatedImages[0].imageUrl) {
-        const imageResponse = await fetch(data.generatedImages[0].imageUrl);
-        const imageBuffer = await imageResponse.arrayBuffer();
-        resultBase64 = Buffer.from(imageBuffer).toString('base64');
-      }
-    }
+    console.log('✅ Gemini画像生成レスポンス受信');
+
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find(p => p.inlineData && p.inlineData.data);
+    const resultBase64 = imagePart?.inlineData?.data || null;
+    const resultMime = imagePart?.inlineData?.mimeType || 'image/png';
     
     if (!resultBase64) {
-      console.error('❌ 画像データが見つかりません');
+      console.error('❌ 画像データ(inlineData)が見つかりません。レスポンス:', JSON.stringify(data).substring(0, 800));
       return res.status(500).json({ 
         error: '画像データが取得できませんでした'
       });
@@ -125,7 +127,7 @@ module.exports = async (req, res) => {
     return res.json({
       success: true,
       image: resultBase64,
-      mimeType: 'image/png'
+      mimeType: resultMime
     });
   } catch (error) {
     console.error('❌ 生成エラー詳細:');
