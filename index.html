@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI画像生成ツール - NanobananaDMAT</title>
+    <link rel="stylesheet" href="/style.css?v=4">
+    <style>
+        /* 即座に適用される基本スタイル */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #1e293b;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🎨 AI画像生成ツール</h1>
+                <p class="header-subtitle">テキストと画像から新しい画像を自由に生成</p>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- 左側：入力セクション -->
+            <div class="input-panel">
+                <div class="panel-card">
+                    <h2 class="section-title">✨ 画像を生成</h2>
+                    
+                    <!-- テキスト入力 -->
+                    <div class="input-group">
+                        <label for="prompt-input" class="input-label">
+                            <span class="label-icon">📝</span>
+                            画像の説明（テキスト）
+                        </label>
+                        <textarea 
+                            id="prompt-input" 
+                            class="prompt-textarea"
+                            placeholder="例: バナナが乗っているカラフルなケーキ、夕日の下で走る猫、未来の都市風景など..."
+                            rows="5"
+                        ></textarea>
+                        <div class="input-hint">テキストだけでも、画像と組み合わせてもOKです</div>
+                    </div>
+
+                    <!-- 画像アップロード -->
+                    <div class="input-group">
+                        <label class="input-label">
+                            <span class="label-icon">🖼️</span>
+                            元になる画像（オプション）
+                        </label>
+                        
+                        <!-- ドラッグ&ドロップエリア -->
+                        <div 
+                            id="drop-zone" 
+                            class="drop-zone"
+                            ondrop="handleDrop(event)"
+                            ondragover="handleDragOver(event)"
+                            ondragleave="handleDragLeave(event)"
+                        >
+                            <div class="drop-zone-content">
+                                <div class="drop-icon">📎</div>
+                                <p class="drop-text">画像をドラッグ&ドロップ</p>
+                                <p class="drop-subtext">またはクリックしてファイルを選択</p>
+                                <input 
+                                    type="file" 
+                                    id="file-input" 
+                                    accept="image/*" 
+                                    class="file-input"
+                                    onchange="handleFileSelect(event)"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- プレビュー -->
+                        <div id="image-preview" class="image-preview" style="display: none;">
+                            <div class="preview-header">
+                                <span class="preview-label">プレビュー</span>
+                                <button class="remove-button" onclick="removeImage()">✕</button>
+                            </div>
+                            <img id="preview-image" src="" alt="プレビュー" class="preview-img">
+                        </div>
+                    </div>
+
+                    <!-- 生成ボタン -->
+                    <button id="generate-button" class="generate-button" onclick="generateImage()">
+                        <span class="button-icon">✨</span>
+                        <span class="button-text">画像を生成</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右側：結果表示セクション -->
+            <div id="result-panel" class="result-panel">
+                <div class="panel-card result-card">
+                    <h2 class="section-title result-title">
+                        <span class="title-icon">🎉</span>
+                        生成された画像
+                    </h2>
+                    <div id="result-placeholder" class="result-placeholder">
+                        <div class="placeholder-content">
+                            <div class="placeholder-icon">🖼️</div>
+                            <p class="placeholder-text">生成された画像がここに表示されます</p>
+                        </div>
+                    </div>
+                    <div id="result-content" class="result-content" style="display: none;">
+                        <div class="result-image-wrapper">
+                            <img id="result-image" src="" alt="生成された画像" class="result-image">
+                        </div>
+                        <div class="result-actions">
+                            <button class="download-button" onclick="downloadImage()">
+                                <span class="button-icon">💾</span>
+                                画像をダウンロード
+                            </button>
+                            <button class="generate-again-button" onclick="scrollToTop()">
+                                <span class="button-icon">🔄</span>
+                                もう一度生成
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ローディングオーバーレイ -->
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">
+            <div class="loading-content">
+                <div class="spinner-large"></div>
+                <h3 class="loading-title">画像を生成中...</h3>
+                <p class="loading-subtitle">少しお待ちください</p>
+            </div>
+        </div>
+
+        <!-- エラー表示 -->
+        <div id="error-toast" class="error-toast" style="display: none;">
+            <span class="error-icon">⚠️</span>
+            <span id="error-message" class="error-text"></span>
+            <button class="error-close" onclick="hideError()">✕</button>
+        </div>
+    </div>
+
+    <script src="/script.js?v=4"></script>
+</body>
+</html>
+
+
