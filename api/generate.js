@@ -36,7 +36,8 @@ module.exports = async (req, res) => {
     // - models/gemini-2.5-flash-image-preview
     // - models/gemini-3-pro-image-preview
     const apiKey = process.env.GEMINI_API_KEY;
-    const modelName = process.env.GEMINI_IMAGE_MODEL || 'models/gemini-2.5-flash-image';
+    // ユーザー要望: 品質優先で Gemini 3.0 のみ使用（フォールバックなし）
+    const modelName = 'models/gemini-3-pro-image-preview';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
 
     console.log('🤖 Gemini画像生成(v1beta generateContent) 呼び出し開始...');
