@@ -2,7 +2,11 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/**/*.js",
+      "src": "api/generate.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/generate-from-image.js",
       "use": "@vercel/node"
     },
     {
@@ -12,8 +16,19 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/generate",
+      "dest": "/api/generate.js"
+    },
+    {
+      "src": "/api/generate-from-image",
+      "dest": "/api/generate-from-image.js"
+    },
+    {
+      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot))",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      },
+      "dest": "/server.js"
     },
     {
       "src": "/(.*)",

@@ -96,6 +96,14 @@ async function generateImage() {
             });
         }
         
+        // レスポンスがJSONかどうかを確認
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('❌ JSON以外のレスポンスを受信:', text.substring(0, 200));
+            throw new Error(`サーバーエラーが発生しました（ステータス: ${response.status}）。APIエンドポイントが正しく設定されているか確認してください。`);
+        }
+        
         const data = await response.json();
         
         if (!response.ok) {
